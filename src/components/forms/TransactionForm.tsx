@@ -52,16 +52,26 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ initialData, onSucces
       if (!dataToSave.client_id) delete dataToSave.client_id
       if (!dataToSave.project_id) delete dataToSave.project_id
       
-      // Clean up fields that might be present from initialData but not needed for insert/update
-      delete (dataToSave as any).id
-      delete (dataToSave as any).created_at
+      const transactionId = initialData?.id
 
-      const { error } = await supabase
-        .from('transactions')
-        .insert([dataToSave])
-
-      if (error) throw error
-      toast.success(`Transaction added: ${formData.description}`)
+      if (transactionId) {
+        // Remove fields that shouldn't be in update
+        delete (dataToSave as any).id
+        delete (dataToSave as any).created_at
+        
+        const { error } = await supabase
+          .from('transactions')
+          .update(dataToSave)
+          .eq('id', transactionId)
+        if (error) throw error
+        toast.success(`Transaction updated: ${formData.description}`)
+      } else {
+        const { error } = await supabase
+          .from('transactions')
+          .insert([dataToSave])
+        if (error) throw error
+        toast.success(`Transaction added: ${formData.description}`)
+      }
       onSuccess()
     } catch (error: any) {
       toast.error('Error saving: ' + error.message)
