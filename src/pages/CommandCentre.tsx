@@ -37,16 +37,18 @@ const CommandCentre: React.FC = () => {
     try {
       setLoading(true)
       const now = new Date()
+      const today = now.toISOString().split('T')[0]
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-      const [clients, projects, leads, invoices, tasks, trans, monthlyTrans] = await Promise.all([
+      const [clients, projects, leads, invoices, tasks, trans, monthlyTrans, followUpsToday] = await Promise.all([
         supabase.from('clients').select('id', { count: 'exact' }).eq('status', 'active'),
         supabase.from('projects').select('id', { count: 'exact' }).eq('status', 'active'),
-        supabase.from('leads').select('id', { count: 'exact' }).eq('converted', false),
+        supabase.from('leads').select('id', { count: 'exact' }).not('stage', 'in', '(won,lost)'),
         supabase.from('invoices').select('total').neq('status', 'paid'),
-        supabase.from('tasks').select('id', { count: 'exact' }).neq('status', 'done').lt('due_date', new Date().toISOString()),
+        supabase.from('tasks').select('id', { count: 'exact' }).neq('status', 'done').lt('due_date', now.toISOString()),
         supabase.from('transactions').select('*').order('date', { ascending: false }).limit(5),
-        supabase.from('transactions').select('amount').eq('type', 'income').gte('date', firstDayOfMonth)
+        supabase.from('transactions').select('amount').eq('type', 'income').gte('date', firstDayOfMonth),
+        supabase.from('leads').select('*').eq('follow_up_date', today)
       ])
 
       const monthlyRevenue = monthlyTrans.data?.reduce((sum, t) => sum + t.amount, 0) || 0
@@ -60,6 +62,7 @@ const CommandCentre: React.FC = () => {
         overdueTasks: tasks.count || 0
       })
       setRecentTransactions(trans.data || [])
+      setUpcomingProjects(followUpsToday.data || []) // Reusing this state for follow-ups
     } catch (error: any) {
       toast.error('Failed to load dashboard: ' + error.message)
     } finally {
@@ -193,10 +196,26 @@ const CommandCentre: React.FC = () => {
                <Clock className="w-4 h-4 text-dim" />
              </div>
              <div className="p-6">
-                <div className="text-center py-8">
-                  <Rocket className="w-10 h-10 text-faint mx-auto mb-3" />
-                  <p className="text-xs text-dim">All caught up for today!</p>
-                </div>
+                {upcomingProjects.length > 0 ? (
+                  <div className="space-y-4">
+                    {upcomingProjects.map(lead => (
+                      <div key={lead.id} className="flex items-start gap-3 p-3 bg-[var(--surface2)] rounded-xl border border-[var(--border)]">
+                        <div className="w-8 h-8 rounded-lg bg-[var(--purple-dim)] text-[var(--purple)] flex items-center justify-center flex-shrink-0">
+                          <Users size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate">{lead.name}</p>
+                          <p className="text-[10px] text-dim">{lead.service_interest || 'General Lead'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Rocket className="w-10 h-10 text-faint mx-auto mb-3" />
+                    <p className="text-xs text-dim">All caught up for today!</p>
+                  </div>
+                )}
              </div>
            </div>
         </div>

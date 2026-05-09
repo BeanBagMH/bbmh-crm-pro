@@ -16,6 +16,7 @@ import {
 import Badge from '../components/ui/Badge'
 import SlideOver from '../components/ui/SlideOver'
 import { toast } from 'sonner'
+import LeadForm from '../components/forms/LeadForm'
 
 const stages: LeadStage[] = ['new', 'contacted', 'proposal_sent', 'negotiating', 'won', 'lost']
 
@@ -26,19 +27,6 @@ const Pipeline: React.FC = () => {
   // Drawer State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [formData, setFormData] = useState<Partial<Lead>>({
-    name: '',
-    company: '',
-    email: '',
-    phone: '',
-    stage: 'new',
-    source: 'Direct',
-    estimated_value: 0,
-    service_interest: '',
-    notes: ''
-  })
-
   useEffect(() => {
     fetchLeads()
   }, [])
@@ -63,51 +51,10 @@ const Pipeline: React.FC = () => {
   const handleOpenDrawer = (lead?: Lead) => {
     if (lead) {
       setEditingLead(lead)
-      setFormData(lead)
     } else {
       setEditingLead(null)
-      setFormData({
-        name: '',
-        company: '',
-        email: '',
-        phone: '',
-        stage: 'new',
-        source: 'Direct',
-        estimated_value: 0,
-        service_interest: '',
-        notes: ''
-      })
     }
     setIsDrawerOpen(true)
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.name) return toast.error('Lead name is required')
-
-    try {
-      setIsSaving(true)
-      if (editingLead) {
-        const { error } = await supabase
-          .from('leads')
-          .update(formData)
-          .eq('id', editingLead.id)
-        if (error) throw error
-        toast.success('Lead updated')
-      } else {
-        const { error } = await supabase
-          .from('leads')
-          .insert([formData])
-        if (error) throw error
-        toast.success('Lead added')
-      }
-      setIsDrawerOpen(false)
-      fetchLeads()
-    } catch (error: any) {
-      toast.error('Error saving: ' + error.message)
-    } finally {
-      setIsSaving(false)
-    }
   }
 
   const handleDelete = async (id: string) => {
@@ -231,51 +178,14 @@ const Pipeline: React.FC = () => {
         onClose={() => setIsDrawerOpen(false)}
         title={editingLead ? 'Edit Lead' : 'New Lead'}
       >
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="stat-card-label mb-2 block">Contact Name</label>
-              <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none" />
-            </div>
-            <div>
-              <label className="stat-card-label mb-2 block">Company</label>
-              <input type="text" value={formData.company || ''} onChange={e => setFormData({...formData, company: e.target.value})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="stat-card-label mb-2 block">Email</label>
-                <input type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none" />
-              </div>
-              <div>
-                <label className="stat-card-label mb-2 block">Phone</label>
-                <input type="text" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="stat-card-label mb-2 block">Stage</label>
-                <select value={formData.stage} onChange={e => setFormData({...formData, stage: e.target.value as LeadStage})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none capitalize">
-                  {stages.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="stat-card-label mb-2 block">Est. Value (₹)</label>
-                <input type="number" value={formData.estimated_value} onChange={e => setFormData({...formData, estimated_value: Number(e.target.value)})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="stat-card-label mb-2 block">Source</label>
-              <input type="text" value={formData.source || ''} onChange={e => setFormData({...formData, source: e.target.value})} className="w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none" placeholder="e.g. Instagram, Referral" />
-            </div>
-          </div>
-
-          <div className="pt-6 flex gap-3">
-            <button type="button" onClick={() => setIsDrawerOpen(false)} className="flex-1 px-6 py-3 rounded-xl border border-[var(--border)] font-bold text-dim hover:bg-[var(--surface2)] transition-all">Cancel</button>
-            <button type="submit" disabled={isSaving} className="flex-1 btn-primary justify-center">
-              {isSaving ? <Loader2 className="animate-spin" size={18} /> : 'Save Lead'}
-            </button>
-          </div>
-        </form>
+        <LeadForm 
+          initialData={editingLead || undefined}
+          onSuccess={() => {
+            setIsDrawerOpen(false)
+            fetchLeads()
+          }}
+          onCancel={() => setIsDrawerOpen(false)}
+        />
       </SlideOver>
     </div>
   )

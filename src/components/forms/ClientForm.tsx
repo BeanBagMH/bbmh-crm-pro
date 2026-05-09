@@ -10,7 +10,7 @@ interface ClientFormProps {
   onCancel: () => void
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, onCancel }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
@@ -20,7 +20,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, onCancel }) => {
     city: '',
     status: 'prospect',
     monthly_retainer: 0,
-    total_billed: 0
+    total_billed: 0,
+    ...initialData
   })
 
   const handleSave = async (e: React.FormEvent) => {
@@ -29,12 +30,20 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSuccess, onCancel }) => {
 
     try {
       setIsSaving(true)
-      const { error } = await supabase
-        .from('clients')
-        .insert([formData])
-      
-      if (error) throw error
-      toast.success('Client added successfully')
+      if (initialData?.id) {
+        const { error } = await supabase
+          .from('clients')
+          .update(formData)
+          .eq('id', initialData.id)
+        if (error) throw error
+        toast.success('Client updated successfully')
+      } else {
+        const { error } = await supabase
+          .from('clients')
+          .insert([formData])
+        if (error) throw error
+        toast.success('Client added successfully')
+      }
       onSuccess()
     } catch (error: any) {
       toast.error('Error saving client: ' + error.message)

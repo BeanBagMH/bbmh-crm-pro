@@ -44,6 +44,7 @@ const Settings: React.FC = () => {
         .upsert(updatedProfile)
 
       if (error) throw error
+      toast.success('Settings updated ✓')
     } catch (error: any) {
       toast.error(`Failed to update ${field}: ` + error.message)
     } finally {

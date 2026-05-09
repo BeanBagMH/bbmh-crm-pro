@@ -10,15 +10,27 @@ interface TaskFormProps {
   onCancel: () => void
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
+const TaskForm: React.FC<TaskFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [isSaving, setIsSaving] = useState(false)
+  const [projects, setProjects] = useState<{id: string, title: string}[]>([])
   const [formData, setFormData] = useState<Partial<CRMTask>>({
     title: '',
     description: '',
     status: 'todo',
     priority: 'medium',
-    due_date: new Date().toISOString().split('T')[0]
+    due_date: new Date().toISOString().split('T')[0],
+    project_id: '',
+    ...initialData
   })
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  async function fetchProjects() {
+    const { data } = await supabase.from('projects').select('id, title')
+    if (data) setProjects(data)
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,12 +38,20 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSuccess, onCancel }) => {
 
     try {
       setIsSaving(true)
-      const { error } = await supabase
-        .from('tasks')
-        .insert([formData])
-      
-      if (error) throw error
-      toast.success('Task added successfully')
+      if (initialData?.id) {
+        const { error } = await supabase
+          .from('tasks')
+          .update(formData)
+          .eq('id', initialData.id)
+        if (error) throw error
+        toast.success('Task updated successfully')
+      } else {
+        const { error } = await supabase
+          .from('tasks')
+          .insert([formData])
+        if (error) throw error
+        toast.success('Task added successfully')
+      }
       onSuccess()
     } catch (error: any) {
       toast.error('Error saving task: ' + error.message)

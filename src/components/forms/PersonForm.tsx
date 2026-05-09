@@ -10,7 +10,7 @@ interface PersonFormProps {
   onCancel: () => void
 }
 
-const PersonForm: React.FC<PersonFormProps> = ({ onSuccess, onCancel }) => {
+const PersonForm: React.FC<PersonFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState<Partial<Person>>({
     name: '',
@@ -18,7 +18,8 @@ const PersonForm: React.FC<PersonFormProps> = ({ onSuccess, onCancel }) => {
     type: 'team',
     email: '',
     phone: '',
-    status: 'active'
+    status: 'active',
+    ...initialData
   })
 
   const handleSave = async (e: React.FormEvent) => {
@@ -27,12 +28,20 @@ const PersonForm: React.FC<PersonFormProps> = ({ onSuccess, onCancel }) => {
 
     try {
       setIsSaving(true)
-      const { error } = await supabase
-        .from('people')
-        .insert([formData])
-      
-      if (error) throw error
-      toast.success('Person added successfully')
+      if (initialData?.id) {
+        const { error } = await supabase
+          .from('people')
+          .update(formData)
+          .eq('id', initialData.id)
+        if (error) throw error
+        toast.success('Person updated successfully')
+      } else {
+        const { error } = await supabase
+          .from('people')
+          .insert([formData])
+        if (error) throw error
+        toast.success('Person added successfully')
+      }
       onSuccess()
     } catch (error: any) {
       toast.error('Error saving: ' + error.message)

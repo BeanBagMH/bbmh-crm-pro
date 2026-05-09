@@ -12,7 +12,7 @@ interface ProjectFormProps {
 
 const stages: ProjectStage[] = ['discovery', 'proposal', 'active', 'revision', 'delivered', 'invoiced']
 
-const ProjectForm: React.FC<ProjectFormProps> = ({ onSuccess, onCancel }) => {
+const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [clients, setClients] = useState<{id: string, name: string}[]>([])
   
@@ -24,7 +24,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onSuccess, onCancel }) => {
     stage: 'discovery',
     priority: 'medium',
     value: 0,
-    paid: 0
+    paid: 0,
+    ...initialData
   })
 
   useEffect(() => {
@@ -43,12 +44,20 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onSuccess, onCancel }) => {
 
     try {
       setIsSaving(true)
-      const { error } = await supabase
-        .from('projects')
-        .insert([formData])
-      
-      if (error) throw error
-      toast.success('Project added successfully')
+      if (initialData?.id) {
+        const { error } = await supabase
+          .from('projects')
+          .update(formData)
+          .eq('id', initialData.id)
+        if (error) throw error
+        toast.success('Project updated successfully')
+      } else {
+        const { error } = await supabase
+          .from('projects')
+          .insert([formData])
+        if (error) throw error
+        toast.success('Project added successfully')
+      }
       onSuccess()
     } catch (error: any) {
       toast.error('Error saving project: ' + error.message)
