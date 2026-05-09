@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { Transaction, TransactionType } from '../types'
+import { supabase } from '../../lib/supabase'
+import { Transaction, TransactionType } from '../../types'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 

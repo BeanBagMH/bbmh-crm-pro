@@ -229,7 +229,6 @@ const Finances: React.FC = () => {
           onCancel={() => setIsDrawerOpen(false)}
         />
       </SlideOver>
-      </SlideOver>
     </div>
   )
 }
